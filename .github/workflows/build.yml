@@ -8,6 +8,7 @@ on:
 
 jobs:
   build:
+    if: "!startsWith(github.event.head_commit.message, 'release:')"
     runs-on: macos-15
     outputs:
       dmg-name: ${{ steps.build.outputs.dmg-name }}

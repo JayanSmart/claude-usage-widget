@@ -24,7 +24,7 @@
             src = ./.;
 
             nativeBuildInputs = [ pkgs.swift pkgs.swiftpm ];
-            buildInputs = with pkgs.darwin.apple_sdk.frameworks; [
+            buildInputs = with pkgs.apple_sdk.frameworks; [
               Foundation AppKit SwiftUI Combine
             ];
 
