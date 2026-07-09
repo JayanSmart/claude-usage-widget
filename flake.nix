@@ -20,7 +20,7 @@
         let pkgs = nixpkgs.legacyPackages.${system}; in {
           default = pkgs.stdenv.mkDerivation {
             pname = "claude-usage";
-            version = "1.9.0";
+            version = "1.10.0";
             src = ./.;
 
             nativeBuildInputs = [ pkgs.swift pkgs.swiftpm ];
