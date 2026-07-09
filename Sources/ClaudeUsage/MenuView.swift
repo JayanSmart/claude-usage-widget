@@ -152,7 +152,6 @@ struct MenuView: View {
 
                 Spacer()
 
-                // Refresh
                 Button {
                     Task { await model.refresh() }
                 } label: {
@@ -162,18 +161,26 @@ struct MenuView: View {
                 .help("Refresh")
                 .disabled(model.isLoading)
 
-                // Log out (clears Keychain; only relevant when source is Keychain)
-                if model.cookieSource == "Keychain" {
-                    Button {
-                        model.logout()
-                    } label: {
-                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                Menu {
+                    Picker("Theme", selection: $model.appearanceMode) {
+                        ForEach(AppearanceMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue.capitalized).tag(mode)
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .help("Log out")
+                    Divider()
+                    Button("Log out") {
+                        model.logout()
+                    }
+                    Divider()
+                    Button("Quit") {
+                        NSApplication.shared.terminate(nil)
+                    }
+                } label: {
+                    Image(systemName: "gearshape")
                 }
-
-                quitButton
+                .menuStyle(.borderlessButton)
+                .frame(width: 16)
+                .help("Settings")
             }
             .foregroundStyle(.secondary)
             .padding(.horizontal)
@@ -232,13 +239,20 @@ struct WindowRow: View {
         .padding(.vertical, 8)
     }
 
-    /// "resets at 14:23 (1h 7m)"
     private func resetLabel(for date: Date) -> String {
         let timeStr = date.formatted(.dateTime.hour().minute())
         let secs    = max(0, Int(date.timeIntervalSinceNow))
-        let h = secs / 3600
+        let d = secs / 86400
+        let h = (secs % 86400) / 3600
         let m = (secs % 3600) / 60
-        let rel = h > 0 ? "\(h)h \(m)m" : "\(m)m"
+        let rel: String
+        if d > 0 {
+            rel = "\(d)d \(h)h \(m)m"
+        } else if h > 0 {
+            rel = "\(h)h \(m)m"
+        } else {
+            rel = "\(m)m"
+        }
         return "resets at \(timeStr) (\(rel))"
     }
 }

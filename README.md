@@ -6,6 +6,8 @@ A native macOS menu bar widget that shows your Claude.ai usage windows (5-hour, 
 ![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
+![Screenshot](Resources/screenshot.png)
+
 ## Features
 
 - Live usage percentages in the menu bar with color-coded warnings
