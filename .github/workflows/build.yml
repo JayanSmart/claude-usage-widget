@@ -1,0 +1,84 @@
+name: Build & Release
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    outputs:
+      dmg-name: ${{ steps.build.outputs.dmg-name }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build app and DMG
+        id: build
+        run: |
+          bash dist.sh
+          echo "dmg-name=ClaudeUsage.dmg" >> "$GITHUB_OUTPUT"
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ClaudeUsage
+          path: ClaudeUsage.dmg
+
+  release:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine next version
+        id: version
+        run: |
+          LATEST=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+          if [ -z "$LATEST" ]; then
+            NEXT="v1.0.0"
+          else
+            # Bump minor, reset patch
+            MAJOR=$(echo "$LATEST" | cut -d. -f1)
+            MINOR=$(echo "$LATEST" | cut -d. -f2)
+            NEXT="${MAJOR}.$((MINOR + 1)).0"
+          fi
+          echo "tag=${NEXT}" >> "$GITHUB_OUTPUT"
+          echo "version=${NEXT#v}" >> "$GITHUB_OUTPUT"
+          echo "Next version: ${NEXT}"
+
+      - name: Update version in Info.plist
+        run: |
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" Resources/Info.plist
+
+      - name: Update version in flake.nix
+        run: |
+          sed -i '' 's/version = "[^"]*"/version = "${{ steps.version.outputs.version }}"/' flake.nix
+
+      - name: Build release DMG
+        run: bash dist.sh
+
+      - name: Create release commit and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Resources/Info.plist flake.nix
+          git commit -m "release: ${{ steps.version.outputs.tag }}" || true
+          git tag "${{ steps.version.outputs.tag }}"
+          git push origin main --tags
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          files: ClaudeUsage.dmg
+          generate_release_notes: true
