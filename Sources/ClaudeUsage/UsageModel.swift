@@ -1,8 +1,26 @@
 import SwiftUI
 import Combine
 
+enum AppearanceMode: String, CaseIterable {
+    case system, light, dark
+
+    var appearance: NSAppearance? {
+        switch self {
+        case .system: return nil
+        case .light:  return NSAppearance(named: .aqua)
+        case .dark:   return NSAppearance(named: .darkAqua)
+        }
+    }
+}
+
 @MainActor
 final class UsageModel: ObservableObject {
+    @Published var appearanceMode: AppearanceMode {
+        didSet {
+            UserDefaults.standard.set(appearanceMode.rawValue, forKey: "appearanceMode")
+            NSApp.appearance = appearanceMode.appearance
+        }
+    }
     @Published var fiveHourPct: Double = 0
     @Published var sevenDayPct: Double = 0
     @Published var fiveHourResetsAt: Date?
@@ -18,6 +36,9 @@ final class UsageModel: ObservableObject {
     let client = UsageClient()
 
     init() {
+        let saved = UserDefaults.standard.string(forKey: "appearanceMode") ?? "system"
+        self.appearanceMode = AppearanceMode(rawValue: saved) ?? .system
+        NSApp.appearance = self.appearanceMode.appearance
         Task { await refresh() }
         timer = Timer.publish(every: 60, on: .main, in: .common)
             .autoconnect()

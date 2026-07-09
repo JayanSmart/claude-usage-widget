@@ -144,7 +144,7 @@ actor UsageClient {
 
         // Collect all extra windows beyond the two primary ones.
         // Ordering: amber_ladder first (it has a defined reset), then others alphabetically.
-        let knownKeys: Set<String> = ["five_hour", "seven_day"]
+        let knownKeys: Set<String> = ["five_hour", "seven_day", "amber_ladder"]
         var extra: [(label: String, window: UsageResult.Window)] = []
         for (key, value) in json {
             guard !knownKeys.contains(key),
