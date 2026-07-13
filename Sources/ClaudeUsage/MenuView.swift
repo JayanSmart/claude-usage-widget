@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import ClaudeUsageCore
 
 struct MenuView: View {
     @EnvironmentObject var model: UsageModel
@@ -242,17 +243,6 @@ struct WindowRow: View {
     private func resetLabel(for date: Date) -> String {
         let timeStr = date.formatted(.dateTime.hour().minute())
         let secs    = max(0, Int(date.timeIntervalSinceNow))
-        let d = secs / 86400
-        let h = (secs % 86400) / 3600
-        let m = (secs % 3600) / 60
-        let rel: String
-        if d > 0 {
-            rel = "\(d)d \(h)h \(m)m"
-        } else if h > 0 {
-            rel = "\(h)h \(m)m"
-        } else {
-            rel = "\(m)m"
-        }
-        return "resets at \(timeStr) (\(rel))"
+        return "resets at \(timeStr) (\(formatResetCountdown(seconds: secs)))"
     }
 }

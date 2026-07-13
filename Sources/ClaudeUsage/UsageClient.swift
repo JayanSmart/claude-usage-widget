@@ -2,20 +2,9 @@ import Foundation
 import Security
 import SQLite3
 import CommonCrypto
+import ClaudeUsageCore
 
-// MARK: - Models
-
-struct UsageResult {
-    struct Window {
-        var utilization: Double
-        var resetsAt: Date?
-    }
-    var fiveHour: Window
-    var sevenDay: Window
-    /// Any additional windows beyond five_hour / seven_day (e.g. monthly caps on higher tiers).
-    var extra: [(label: String, window: Window)]
-    var cookieSource: String
-}
+typealias UsageResult = ParsedUsage
 
 enum UsageError: LocalizedError {
     case noCookiesFound
@@ -122,55 +111,7 @@ actor UsageClient {
     // MARK: - Parsing
 
     private func parseUsage(_ json: [String: Any], source: String) -> UsageResult {
-        func parseDate(_ str: String) -> Date? {
-            // Try with fractional seconds first (API may return microseconds),
-            // then fall back to plain internet date-time.
-            let f = ISO8601DateFormatter()
-            f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            if let d = f.date(from: str) { return d }
-            f.formatOptions = [.withInternetDateTime]
-            return f.date(from: str)
-        }
-
-        func parseWindow(_ dict: [String: Any]) -> UsageResult.Window {
-            let pct  = dict["utilization"] as? Double ?? 0
-            let date = (dict["resets_at"] as? String).flatMap { parseDate($0) }
-            return UsageResult.Window(utilization: pct, resetsAt: date)
-        }
-
-        func window(_ key: String) -> UsageResult.Window {
-            parseWindow(json[key] as? [String: Any] ?? [:])
-        }
-
-        // Collect all extra windows beyond the two primary ones.
-        // Ordering: amber_ladder first (it has a defined reset), then others alphabetically.
-        let knownKeys: Set<String> = ["five_hour", "seven_day", "amber_ladder"]
-        var extra: [(label: String, window: UsageResult.Window)] = []
-        for (key, value) in json {
-            guard !knownKeys.contains(key),
-                  let dict = value as? [String: Any],
-                  dict["utilization"] != nil else { continue }
-            let label = key
-                .split(separator: "_")
-                .map { $0.prefix(1).uppercased() + $0.dropFirst() }
-                .joined(separator: " ")
-            extra.append((label: label, window: parseWindow(dict)))
-        }
-        // Windows with a reset time (Amber Ladder etc.) sort before those without.
-        extra.sort {
-            switch ($0.window.resetsAt, $1.window.resetsAt) {
-            case (.some, .none): return true
-            case (.none, .some): return false
-            default:             return $0.label < $1.label
-            }
-        }
-
-        return UsageResult(
-            fiveHour: window("five_hour"),
-            sevenDay: window("seven_day"),
-            extra: extra,
-            cookieSource: source
-        )
+        UsageResult.parse(json, source: source)
     }
 
     // MARK: - Session key (Keychain) + Org ID (UserDefaults)
